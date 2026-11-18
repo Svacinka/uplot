@@ -5,6 +5,61 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>[upload]</title>
 <style>
+    .hero {
+    --void: #10070a; --red: #ff2a4d; --ice: #7df9ff; --bone: #f2efe9;
+    position: relative; overflow: hidden;
+    margin: -28px -28px 24px; padding: 46px 16px 42px;
+    background: var(--void); border-radius: 9px 9px 0 0; text-align: center;
+  }
+  /* scanlines */
+  .hero::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(0deg, rgba(255,255,255,.05) 0 1px, transparent 1px 3px);
+  }
+  /* a red scan bar sweeping down */
+  .hero::before {
+    content: ""; position: absolute; left: 0; right: 0; top: -4px; height: 2px;
+    background: var(--red); opacity: .55; animation: sweep 5s linear infinite;
+  }
+  .glitch {
+    position: relative; display: inline-block; margin: 0; color: var(--bone);
+    font: 800 clamp(2.6rem, 12vw, 4.6rem)/1 ui-monospace, "Cascadia Mono", Consolas, "Courier New", monospace;
+    letter-spacing: -.03em;
+    animation: boot .8s steps(8) both, jolt 4.2s 1s infinite;
+  }
+  .glitch::before, .glitch::after {
+    content: attr(data-text); position: absolute; inset: 0;
+    clip-path: inset(0 0 100% 0);
+  }
+  .glitch::before { color: var(--red); animation: slice-a 4.2s 1s infinite; }
+  .glitch::after  { color: var(--ice); animation: slice-b 4.2s 1s infinite; }
+
+  @keyframes boot  { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(-24px); } }
+  @keyframes sweep { to { top: 100%; } }
+  @keyframes jolt {
+    0%, 85%, 100% { transform: none; }
+    87% { transform: skewX(-9deg); }
+    90% { transform: skewX(7deg) translateX(3px); }
+    93% { transform: skewX(-3deg); }
+  }
+  @keyframes slice-a {
+    0%, 85%, 96%, 100% { clip-path: inset(0 0 100% 0); transform: none; }
+    86% { clip-path: inset(8% 0 62% 0);  transform: translate(-7px, 0); }
+    89% { clip-path: inset(55% 0 22% 0); transform: translate(5px, 0); }
+    92% { clip-path: inset(28% 0 46% 0); transform: translate(-5px, 0); }
+    94% { clip-path: inset(78% 0 4% 0);  transform: translate(7px, 0); }
+  }
+  @keyframes slice-b {
+    0%, 85%, 96%, 100% { clip-path: inset(0 0 100% 0); transform: none; }
+    87% { clip-path: inset(66% 0 12% 0); transform: translate(7px, 0); }
+    90% { clip-path: inset(12% 0 70% 0); transform: translate(-6px, 0); }
+    93% { clip-path: inset(44% 0 34% 0); transform: translate(6px, 0); }
+    95% { clip-path: inset(86% 0 2% 0);  transform: translate(-7px, 0); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hero::before, .glitch { animation: none; }
+    .glitch::before, .glitch::after { display: none; }
+  }
   :root {
     --paper: #e8ecf1;
     --panel: #f7f9fb;
