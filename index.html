@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Send files to Discord</title>
+<style>
+  :root {
+    --paper: #e8ecf1;
+    --panel: #f7f9fb;
+    --ink: #17202b;
+    --muted: #5b6776;
+    --line: #b9c3d0;
+    --accent: #3b4cca;
+    --ok: #1f7a4d;
+    --err: #b3261e;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px;
+    background: var(--paper); color: var(--ink);
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { width: min(520px, 100%); background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 28px; }
+  h1 { margin: 0 0 4px; font-size: 1.5rem; letter-spacing: -0.01em; }
+  p.sub { margin: 0 0 22px; color: var(--muted); }
+  label { display: block; margin: 16px 0 6px; font-weight: 600; font-size: .95rem; }
+  input[type=text], input[type=password], textarea {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px;
+    background: #fff; color: var(--ink); font: inherit;
+  }
+  textarea { resize: vertical; min-height: 72px; }
+  #drop {
+    display: block; padding: 28px 16px; text-align: center; cursor: pointer;
+    border: 2px dashed var(--line); border-radius: 8px; background: #fff; color: var(--muted);
+  }
+  #drop.over { border-color: var(--accent); color: var(--accent); }
+  #drop input { display: none; }
+  ul#list { list-style: none; margin: 10px 0 0; padding: 0; font-size: .9rem; }
+  ul#list li { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; border-bottom: 1px solid var(--line); }
+  ul#list span:last-child { color: var(--muted); white-space: nowrap; }
+  button {
+    margin-top: 22px; width: 100%; padding: 12px; border: 0; border-radius: 6px;
+    background: var(--accent); color: #fff; font: inherit; font-weight: 600; cursor: pointer;
+  }
+  button:disabled { opacity: .55; cursor: default; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  #status { min-height: 1.5em; margin-top: 14px; font-weight: 600; }
+  #status.ok { color: var(--ok); }
+  #status.err { color: var(--err); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Send files to Discord</h1>
+  <p class="sub">Files are posted to the channel by the bot. Up to 10 files, 10 MB in total.</p>
+
+  <form id="f">
+    <label id="drop" for="files">
+      Drop files here or click to choose
+      <input id="files" type="file" multiple>
+    </label>
+    <ul id="list"></ul>
+
+    <label for="msg">Message (optional)</label>
+    <textarea id="msg" maxlength="1800"></textarea>
+
+    <label for="key">Upload key</label>
+    <input id="key" type="password" autocomplete="current-password">
+
+    <button id="go" type="submit">Upload to Discord</button>
+    <div id="status" role="status"></div>
+  </form>
+</main>
+
+<script>
+  // Set this to your deployed Cloudflare Worker URL.
+  const WORKER_URL = "https://discord-uploader.YOURSUBDOMAIN.workers.dev";
+
+  const $ = (id) => document.getElementById(id);
+  const drop = $("drop"), input = $("files"), list = $("list"), status = $("status"), go = $("go");
+  let files = [];
+
+  const size = (n) => n > 1048576 ? (n / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(n / 1024)) + " KB";
+
+  function render() {
+    list.innerHTML = "";
+    files.forEach((f) => {
+      const li = document.createElement("li");
+      const a = document.createElement("span"); a.textContent = f.name;
+      const b = document.createElement("span"); b.textContent = size(f.size);
+      li.append(a, b); list.append(li);
+    });
+  }
+  function setFiles(fl) { files = [...fl].slice(0, 10); render(); }
+
+  input.addEventListener("change", () => setFiles(input.files));
+  ["dragenter", "dragover"].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.add("over"); }));
+  ["dragleave", "drop"].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.remove("over"); }));
+  drop.addEventListener("drop", (e) => setFiles(e.dataTransfer.files));
+
+  function say(text, cls) { status.textContent = text; status.className = cls || ""; }
+
+  $("f").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!files.length) return say("Choose at least one file.", "err");
+    if (files.reduce((n, f) => n + f.size, 0) > 10 * 1048576) return say("Files exceed 10 MB in total.", "err");
+
+    const fd = new FormData();
+    files.forEach((f) => fd.append("files", f, f.name));
+    fd.append("message", $("msg").value);
+
+    go.disabled = true; say("Uploading…");
+    try {
+      const res = await fetch(WORKER_URL, { method: "POST", headers: { "X-Upload-Key": $("key").value }, body: fd });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        say("Uploaded to Discord.", "ok");
+        files = []; input.value = ""; $("msg").value = ""; render();
+      } else {
+        say(data.error || "Upload failed (" + res.status + ").", "err");
+      }
+    } catch {
+      say("Couldn’t reach the server. Check WORKER_URL and your connection.", "err");
+    } finally {
+      go.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>
