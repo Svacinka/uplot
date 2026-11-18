@@ -1,6 +1,7 @@
 # uplot
 -ˋˏ✄┈┈┈┈┈┈┈┈┈┈┈┈┈┈
-### FreeMason Bot 
-frontend
+### FreeMason frontend
 
 They're watching ☻
+
+Don't forget about Epstein
